@@ -1,0 +1,385 @@
+local Library = {}
+Library.__index = Library
+
+-- Create a new window
+function Library.new(options)
+    local self = setmetatable({}, Library)
+    self.options = options or {}
+    self.pages = {}
+    self.currentPage = nil
+
+    self.screenGui = Instance.new("ScreenGui")
+    self.mainFrame = Instance.new("Frame")
+    self.mainFrame.Size = UDim2.new(0, 400, 0, 300)
+    self.mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+    self.mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    self.mainFrame.Parent = self.screenGui
+
+    self.titleLabel = Instance.new("TextLabel")
+    self.titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    self.titleLabel.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+    self.titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    self.titleLabel.Font = Enum.Font.SourceSansBold
+    self.titleLabel.FontSize = Enum.FontSize.Size14
+    self.titleLabel.Text = self.options.name or "UI Library"
+    self.titleLabel.Parent = self.mainFrame
+
+    self.tabContainer = Instance.new("Frame")
+    self.tabContainer.Size = UDim2.new(1, 0, 1, -30)
+    self.tabContainer.Position = UDim2.new(0, 0, 0, 30)
+    self.tabContainer.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    self.tabContainer.Parent = self.mainFrame
+
+    self.screenGui.Parent = game:GetService("CoreGui")
+
+    return self
+end
+
+-- Create a new tab
+function Library:page(options)
+    local page = {}
+    page.options = options or {}
+    page.sections = {}
+    page.frame = Instance.new("Frame")
+    page.frame.Size = UDim2.new(1, 0, 1, 0)
+    page.frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    page.frame.Visible = false
+    page.frame.Parent = self.tabContainer
+
+    local tabButton = Instance.new("TextButton")
+    tabButton.Size = UDim2.new(0, 100, 0, 30)
+    tabButton.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+    tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabButton.Font = Enum.Font.SourceSansBold
+    tabButton.FontSize = Enum.FontSize.Size14
+    tabButton.Text = page.options.name or "Tab"
+    tabButton.Parent = self.mainFrame
+    tabButton.Position = UDim2.new(0, 0, 0, 30 + (#self.pages * 30))
+
+    tabButton.MouseButton1Click:Connect(function()
+        if self.currentPage then
+            self.currentPage.frame.Visible = false
+        end
+        page.frame.Visible = true
+        self.currentPage = page
+    end)
+
+    table.insert(self.pages, page)
+    return page
+end
+
+-- Create a new section
+function Library:section(options)
+    local section = {}
+    section.options = options or {}
+    section.elements = {}
+    section.frame = Instance.new("Frame")
+    section.frame.Size = UDim2.new(1, 0, 0, section.options.size or 100)
+    section.frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    section.frame.Position = UDim2.new(0, 0, 0, 0)
+    section.frame.Parent = self.currentPage.frame
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 30)
+    titleLabel.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.Font = Enum.Font.SourceSansBold
+    titleLabel.FontSize = Enum.FontSize.Size14
+    titleLabel.Text = section.options.name or "Section"
+    titleLabel.Parent = section.frame
+
+    table.insert(self.currentPage.sections, section)
+    return section
+end
+
+-- Create a toggle
+function Library:toggle(options)
+    local toggle = {}
+    toggle.options = options or {}
+    toggle.value = toggle.options.def or false
+    toggle.callback = toggle.options.callback or function() end
+
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, 0, 0, 30)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    toggleFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 30)
+    toggleFrame.Parent = self.currentPage.sections.frame
+
+    local toggleLabel = Instance.new("TextLabel")
+    toggleLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    toggleLabel.BackgroundTransparency = 1
+    toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleLabel.Font = Enum.Font.SourceSansBold
+    toggleLabel.FontSize = Enum.FontSize.Size14
+    toggleLabel.Text = toggle.options.name or "Toggle"
+    toggleLabel.Parent = toggleFrame
+
+    local toggleButton = Instance.new("TextButton")
+    toggleButton.Size = UDim2.new(0.5, 0, 1, 0)
+    toggleButton.BackgroundColor3 = toggle.value and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    toggleButton.Text = toggle.value and "On" or "Off"
+    toggleButton.Font = Enum.Font.SourceSansBold
+    toggleButton.FontSize = Enum.FontSize.Size14
+    toggleButton.Parent = toggleFrame
+
+    toggleButton.MouseButton1Click:Connect(function()
+        toggle.value = not toggle.value
+        toggleButton.BackgroundColor3 = toggle.value and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        toggleButton.Text = toggle.value and "On" or "Off"
+        toggle.callback(toggle.value)
+    end)
+
+    table.insert(self.currentPage.sections.elements, toggle)
+    return toggle
+end
+
+-- Create a keybind
+function Library:keybind(options)
+    local keybind = {}
+    keybind.options = options or {}
+    keybind.value = keybind.options.def or nil
+    keybind.callback = keybind.options.callback or function() end
+
+    local keybindFrame = Instance.new("Frame")
+    keybindFrame.Size = UDim2.new(1, 0, 0, 30)
+    keybindFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    keybindFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 30)
+    keybindFrame.Parent = self.currentPage.sections.frame
+
+    local keybindLabel = Instance.new("TextLabel")
+    keybindLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    keybindLabel.BackgroundTransparency = 1
+    keybindLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keybindLabel.Font = Enum.Font.SourceSansBold
+    keybindLabel.FontSize = Enum.FontSize.Size14
+    keybindLabel.Text = keybind.options.name or "Keybind"
+    keybindLabel.Parent = keybindFrame
+
+    local keybindText = Instance.new("TextLabel")
+    keybindText.Size = UDim2.new(0.5, 0, 1, 0)
+    keybindText.BackgroundTransparency = 1
+    keybindText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keybindText.Font = Enum.Font.SourceSansBold
+    keybindText.FontSize = Enum.FontSize.Size14
+    keybindText.Text = keybind.value or "None"
+    keybindText.Parent = keybindFrame
+
+    game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+        if not processed and input.KeyCode ~= Enum.KeyCode.Unknown and keybindFrame:IsAncestorOf(input.Focused) then
+            keybind.value = input.KeyCode.Name
+            keybindText.Text = keybind.value
+            keybind.callback(keybind.value)
+        end
+    end)
+
+    table.insert(self.currentPage.sections.elements, keybind)
+    return keybind
+end
+
+-- Create a button
+function Library:button(options)
+    local button = {}
+    button.options = options or {}
+    button.callback = button.options.callback or function() end
+
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Size = UDim2.new(1, 0, 0, 30)
+    buttonFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    buttonFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 30)
+    buttonFrame.Parent = self.currentPage.sections.frame
+
+    local buttonLabel = Instance.new("TextLabel")
+    buttonLabel.Size = UDim2.new(1, 0, 1, 0)
+    buttonLabel.BackgroundTransparency = 1
+    buttonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    buttonLabel.Font = Enum.Font.SourceSansBold
+    buttonLabel.FontSize = Enum.FontSize.Size14
+    buttonLabel.Text = button.options.name or "Button"
+    buttonLabel.Parent = buttonFrame
+
+    buttonLabel.MouseButton1Click:Connect(function()
+        button.callback()
+    end)
+
+    table.insert(self.currentPage.sections.elements, button)
+    return button
+end
+
+-- Create a textbox
+function Library:textbox(options)
+    local textbox = {}
+    textbox.options = options or {}
+    textbox.value = textbox.options.def or ""
+    textbox.callback = textbox.options.callback or function() end
+
+    local textboxFrame = Instance.new("Frame")
+    textboxFrame.Size = UDim2.new(1, 0, 0, 30)
+    textboxFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    textboxFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 30)
+    textboxFrame.Parent = self.currentPage.sections.frame
+
+    local textboxLabel = Instance.new("TextLabel")
+    textboxLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    textboxLabel.BackgroundTransparency = 1
+    textboxLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textboxLabel.Font = Enum.Font.SourceSansBold
+    textboxLabel.FontSize = Enum.FontSize.Size14
+    textboxLabel.Text = textbox.options.name or "TextBox"
+    textboxLabel.Parent = textboxFrame
+
+    local textboxInput = Instance.new("TextBox")
+    textboxInput.Size = UDim2.new(0.5, 0, 1, 0)
+    textboxInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    textboxInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textboxInput.Font = Enum.Font.SourceSansBold
+    textboxInput.FontSize = Enum.FontSize.Size14
+    textboxInput.Text = textbox.value
+    textboxInput.Parent = textboxFrame
+
+    textboxInput.FocusLost:Connect(function()
+        textbox.value = textboxInput.Text
+        textbox.callback(textbox.value)
+    end)
+
+    table.insert(self.currentPage.sections.elements, textbox)
+    return textbox
+end
+
+-- Create a dropdown
+function Library:dropdown(options)
+    local dropdown = {}
+    dropdown.options = options or {}
+    dropdown.value = dropdown.options.def or options.options[1]
+    dropdown.callback = dropdown.options.callback or function() end
+
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
+    dropdownFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    dropdownFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 30)
+    dropdownFrame.Parent = self.currentPage.sections.frame
+
+    local dropdownLabel = Instance.new("TextLabel")
+    dropdownLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    dropdownLabel.BackgroundTransparency = 1
+    dropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdownLabel.Font = Enum.Font.SourceSansBold
+    dropdownLabel.FontSize = Enum.FontSize.Size14
+    dropdownLabel.Text = dropdown.options.name or "Dropdown"
+    dropdownLabel.Parent = dropdownFrame
+
+    local dropdownText = Instance.new("TextLabel")
+    dropdownText.Size = UDim2.new(0.5, 0, 1, 0)
+    dropdownText.BackgroundTransparency = 1
+    dropdownText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdownText.Font = Enum.Font.SourceSansBold
+    dropdownText.FontSize = Enum.FontSize.Size14
+    dropdownText.Text = dropdown.value
+    dropdownText.Parent = dropdownFrame
+
+    local dropdownMenu = Instance.new("Frame")
+    dropdownMenu.Size = UDim2.new(1, 0, 0, 0)
+    dropdownMenu.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    dropdownMenu.Visible = false
+    dropdownMenu.Parent = dropdownFrame
+
+    for _, option in ipairs(dropdown.options.options) do
+        local optionButton = Instance.new("TextButton")
+        optionButton.Size = UDim2.new(1, 0, 0, 30)
+        optionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        optionButton.Font = Enum.Font.SourceSansBold
+        optionButton.FontSize = Enum.FontSize.Size14
+        optionButton.Text = option
+        optionButton.Parent = dropdownMenu
+
+        optionButton.MouseButton1Click:Connect(function()
+            dropdown.value = option
+            dropdownText.Text = option
+            dropdownMenu.Size = UDim2.new(1, 0, 0, 0)
+            dropdownMenu.Visible = false
+            dropdown.callback(option)
+        end)
+    end
+
+    dropdownFrame.MouseButton1Click:Connect(function()
+        dropdownMenu.Size = UDim2.new(1, 0, 0, 30 * #dropdown.options.options)
+        dropdownMenu.Visible = not dropdownMenu.Visible
+    end)
+
+    table.insert(self.currentPage.sections.elements, dropdown)
+    return dropdown
+end
+
+-- Create a slider
+function Library:slider(options)
+    local slider = {}
+    slider.options = options or {}
+    slider.value = slider.options.def or 50
+    slider.callback = slider.options.callback or function() end
+
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    sliderFrame.Position = UDim2.new(0, 0, 0, #self.currentPage.sections.elements * 50)
+    sliderFrame.Parent = self.currentPage.sections.frame
+
+    local sliderLabel = Instance.new("TextLabel")
+    sliderLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    sliderLabel.BackgroundTransparency = 1
+    sliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sliderLabel.Font = Enum.Font.SourceSansBold
+    sliderLabel.FontSize = Enum.FontSize.Size14
+    sliderLabel.Text = slider.options.name or "Slider"
+    sliderLabel.Parent = sliderFrame
+
+    local sliderValue = Instance.new("TextLabel")
+    sliderValue.Size = UDim2.new(1, 0, 0.5, 0)
+    sliderValue.BackgroundTransparency = 1
+    sliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sliderValue.Font = Enum.Font.SourceSansBold
+    sliderValue.FontSize = Enum.FontSize.Size14
+    sliderValue.Text = tostring(slider.value)
+    sliderValue.Parent = sliderFrame
+
+    local sliderBar = Instance.new("Frame")
+    sliderBar.Size = UDim2.new(1, 0, 0.5, 0)
+    sliderBar.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    sliderBar.Parent = sliderFrame
+
+    local sliderButton = Instance.new("TextButton")
+    sliderButton.Size = UDim2.new(0, 20, 1, 0)
+    sliderButton.BackgroundColor3 = Color3.fromRGB(0, 128, 255)
+    sliderButton.Position = UDim2.new((slider.value / 100), 0, 0, 0)
+    sliderButton.Parent = sliderBar
+
+    local function updateSlider(value)
+        slider.value = value
+        sliderValue.Text = tostring(value)
+        slider.callback(value)
+        sliderButton.Position = UDim2.new((value / 100), 0, 0, 0)
+    end
+
+    sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local function move(input)
+                local mouse = game.Players.LocalPlayer:GetMouse()
+                local pos = math.clamp((mouse.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+                updateSlider(pos * 100)
+            end
+
+            move(input)
+            input.Changed:Connect(move)
+        end
+    end)
+
+    sliderBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            input.Changed:Disconnect()
+        end
+    end)
+
+    table.insert(self.currentPage.sections.elements, slider)
+    return slider
+end
+
+return Library
